@@ -1,353 +1,378 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb 24 13:10:51 2021
+Created on 6.4.2022
 
-@author: Emeline
+@author: c-herff based on code by Emeline
 
 Memory game with tkinter
 
-Memory for one or two human players
-
+Memory for one human players
+Could be extended to two players (functions already in place)
 
 """
-
 import random
 import tkinter as tk
-from help_functions import printRules, about
 
-# global variables
-turnedCards = 0 # Number of visible cards
-turnedCardsIm = [] # List of index of turned over cards
-turnedCardNb = [] # List of index of played cards
-foundCards = [] # List of index of found pairs
-cardsValues = [] # List of index of cards
-playersNb = 2
-scorePlayer1 = 0
-scorePlayer2 = 0
-idCurrentPlayer = 1
-rowNb = 5
-colNb = 4
-cardsNb = colNb * rowNb # Total number of cards
-pairsNb = cardsNb//2 # Number of different pairs
-themeList = ['Peanuts', 'Cartoon']
-theme=random.choice(themeList)
+from pylsl import StreamInfo, StreamOutlet
 
+class MemoryGui:
 
-def resetGlobal():
-    '''
-    Resets scores
-    
-    Returns
-    -------
-    None.
-
-    '''
-    global foundCards,scorePlayer1,scorePlayer2,idCurrentPlayer
+    # global variables
+    turnedCards = 0 # Number of visible cards
+    turnedCardsIm = [] # List of index of turned over cards
+    turnedCardNb = [] # List of index of played cards
+    foundCards = [] # List of index of found pairs
+    cardsValues = [] # List of index of cards
+    playersNb = 2
     scorePlayer1 = 0
     scorePlayer2 = 0
     idCurrentPlayer = 1
-    foundCards = []
-  
-
-def reinit(): 
-    '''
-    Hides all cards and resets the number of visible cards
-
-    Returns
-    -------
-    None.
-
-    '''
-    global turnedCards, foundCards
-    for i in range(cardsNb):
-        if i not in foundCards:
-            but_cards[i].configure(image=hiddenCard)
-    turnedCards = 0
-
- 
-def load_cards():
-    '''
-    Returns
-    -------
-    memoryCards : list
-        List containing unique cards (images) chosen randomly for the memory game  
-
-    '''
-    global theme
-    #chosenCards = []
-    totalNb = 17
-    idCard = [i for i in range(1,totalNb+1)]
-    chosenCards = random.sample(idCard, k=pairsNb)
-    memoryCards = [tk.PhotoImage(file=str('Images/'+theme+'/carte-'+str(card)+'.gif')) for card in chosenCards]
-    return memoryCards
-
-
-def initiateGame():
-    '''
-    Returns
-    -------
-    mixedCards : list
-        List of pairs of cards (images object) randomly mixed.
-
-    '''
-    memoryCards = load_cards() * 2
-    mixedCards = random.sample(memoryCards, k=len(memoryCards))
-    return mixedCards
-
-
-# Show visible face of cards 
-def show(item):
-    global turnedCards, foundCards
-    if item not in foundCards:
-        if turnedCards == 0:
-            but_cards[item].configure(image=cardsValues[item])
-            turnedCards += 1
-            turnedCardsIm.append(cardsValues[item])
-            turnedCardNb.append(item)
-        elif turnedCards == 1:
-            if item!=turnedCardNb[len(turnedCardNb)-1]:
-                but_cards[item].configure(image=cardsValues[item])
-                turnedCards += 1
-                turnedCardsIm.append(cardsValues[item])
-                turnedCardNb.append(item)
-    if turnedCards == 2:
-        window.after(2000, check)
-
-# Verify whether the chosen cards are identical
-def check():
-    global turnedCards, foundCards, playersNb
-    if turnedCards == 2:
-        if turnedCardsIm[len(turnedCardsIm)-1] == turnedCardsIm[len(turnedCardsIm)-2]:
-            foundCards.append(turnedCardNb[len(turnedCardNb)-1])
-            foundCards.append(turnedCardNb[len(turnedCardNb)-2])
-            but_cards[turnedCardNb[len(turnedCardNb)-1]].configure(image=blankCard)
-            but_cards[turnedCardNb[len(turnedCardNb)-2]].configure(image=blankCard)
-            incrementScorePlayer()
-        elif playersNb == 2:
-            switchPlayers()
-        reinit()
-
- 
-def incrementScorePlayer():
-    '''
-    Increments the score of the current player
-
-    Returns
-    -------
-    None.
-
-    '''
-    global scorePlayer1, scorePlayer2
-    if idCurrentPlayer == 1:
-        scorePlayer1 += 1
-        lab_scorePlayer1.configure(text=str(scorePlayer1))
-    elif idCurrentPlayer == 2:
-        scorePlayer2 += 1
-        lab_scorePlayer2.configure(text=str(scorePlayer2))
-
-
-def switchPlayers():
-    '''
-    Switches current player
-
-    Returns
-    -------
-    None.
-
-    '''
-    global idCurrentPlayer
-    if idCurrentPlayer == 1:
-        idCurrentPlayer = 2
-        lab_Player1.configure(fg='black')
-        lab_Player2.configure(fg='red')
-    else:
-        idCurrentPlayer = 1
-        lab_Player2.configure(fg='black')
-        lab_Player1.configure(fg='red')
-
-# Add a frame with hidden cards (buttons)
-def frameCardsButtons():
-    global but_cards, frameCards, cardsNb, rowNb, colNb, hiddenCard, theme
-    filename = 'Images/'+theme+'/carte-0.gif'
-    hiddenCard=tk.PhotoImage(file=filename)
-    frameCards.destroy()
-    frameCards = tk.Frame(window)
-    frameCards.pack(side=tk.BOTTOM)
-    but_cards = []
-    for i in range(cardsNb):
-        but_cards.append(tk.Button(frameCards, image=hiddenCard,command=lambda x=i:show(x)))    
-    for count in range(cardsNb):
-        but_cards[count].grid(row=count//rowNb, column=count%rowNb)
-
-def frameTheme():
-    global frame, frameCards, themeList, themeCards
-    frameCards.destroy()
-    frame.destroy()
-    frame = tk.Frame(window, height=500, width=500)
-    frame.pack(side=tk.TOP)
-    lab_Message = tk.Label(frame, text="Choose the theme you want to play with ")
-    lab_Message.grid(row=0, column=1)
-    but_themes = []
-    for count, themeCard in enumerate(themeCards):
-        but_themes.append(tk.Button(frame, image=themeCard, command=lambda x=count: playTheme(x)))
-    for count, but_theme in enumerate(but_themes):
-        but_theme.grid(row=1, column=1+count)
-        
-
-def newGame5x4():
-    '''
-    Sets grid dimensions to 5x4 and launches a new game
-
-    Returns
-    -------
-    None.
-
-    '''
-    global cardsValues,rowNb,colNb,cardsNb,pairsNb,but_cards,frameCards
     rowNb = 5
     colNb = 4
-    gameCurrentDim()
+    cardsNb = colNb * rowNb # Total number of cards
+    pairsNb = cardsNb//2 # Number of different pairs
+    themeList = ['Peanuts', 'Cartoon']
+    #theme=random.choice(themeList)
+    theme = 'Cartoon'
+    
+    def __init__(self, master):
+        self.root = master
+        self.root.title("Memory game")
+        
+        self.frame=tk.Frame(self.root,height=500,width=500)
+        self.frame.pack(side=tk.TOP)
+        self.frameCards=tk.Frame(self.root)
+        self.frameCards.pack(side=tk.BOTTOM)
+
+        #Initialize LSL
+        info = StreamInfo('MemoryMarkerStream', 'Markers', 1, 0, 'string', 'emuidw22')
+        # next make an outlet
+        self.outlet = StreamOutlet(info)
+
+        # menus
+        self.top = tk.Menu(self.root)
+        self.root.config(menu=self.top)
+        self.game = tk.Menu(self.top, tearoff=False)
+        self.top.add_cascade(label='Game', menu=self.game)
+        self.submenu = tk.Menu(self.game, tearoff=False)
+        self.game.add_cascade(label='New Game', menu=self.submenu)
+        self.submenu.add_command(label='Dim 3x4', command=self.newGame3x4)
+        self.submenu.add_command(label='Dim 5x4', command=self.newGame5x4)
+        self.submenu.add_command(label='Dim 5x6', command=self.newGame5x6)
+        self.submenu.add_command(label='Dim 5x8', command=self.newGame5x8)
+        self.game.add_command(label='Close', command=self.root.destroy)
+
+
+        ### Should we want to allow two player games
+        #players_menu = tk.Menu(top,tearoff=False)
+        #top.add_cascade(label='Players',menu=players_menu)
+        #players_menu.add_command(label='1 player',command=onePlayer)
+        #players_menu.add_command(label='2 players',command=twoPlayers)
+
+        ### In case we want to switch themes
+        #themeMenu = tk.Menu(top,tearoff=False)
+        #top.add_command(label='Choose theme',command=frameTheme)
+
+        # images 
+        self.blankCard = tk.PhotoImage(file='Images/blankCard.gif')
+        self.themeCards = [tk.PhotoImage(file=str('Images/'+theme+'/carte-1.gif')) for theme in self.themeList]
+            
+        # start-up
+        #frameTheme()
+        self.onePlayer()
+
+
+
+    def resetGlobal(self):
+        '''
+        Resets scores
+        
+        Returns
+        -------
+        None.
+
+        '''
+        self.scorePlayer1 = 0
+        self.scorePlayer2 = 0
+        self.idCurrentPlayer = 1
+        self.foundCards = []
     
 
-def newGame5x6():
-    '''
-    Sets grid dimensions to 5x6 and lauches a new game
+    def reinit(self): 
+        '''
+        Hides all cards and resets the number of visible cards
 
-    Returns
-    -------
-    None.
+        Returns
+        -------
+        None.
 
-    '''
-    global cardsValues, rowNb, colNb, cardsNb, pairsNb, frameCards
-    rowNb = 5
-    colNb = 6
-    gameCurrentDim()
+        '''
+        for i in range(self.cardsNb):
+            if i not in self.foundCards:
+                self.but_cards[i].configure(image=self.hiddenCard)
+        self.turnedCards = 0
 
-
-def onePlayer():
-    '''
-    Launches a new game for one player (solo mode)
-
-    Returns
-    -------
-    None.
-
-    '''
-    global playersNb
-    playersNb = 1
-    gameCurrentDim()
     
+    def load_cards(self):
+        '''
+        Returns
+        -------
+        memoryCards : list
+            List containing unique cards (images) chosen randomly for the memory game  
 
-def twoPlayers():
-    '''
-    Launches a new game for two players
+        '''
+        #chosenCards = []
+        totalNb = 20
+        idCard = [i for i in range(1,totalNb+1)]
+        chosenCards = random.sample(idCard, k=self.pairsNb)
+        memoryCards = [tk.PhotoImage(file=str('Images/'+self.theme+'/carte-'+str(card)+'.gif')) for card in chosenCards]
+        return memoryCards
 
-    Returns
-    -------
-    None.
+    def initiateGame(self):
+        '''
+        Returns
+        -------
+        mixedCards : list
+            List of pairs of cards (images object) randomly mixed.
 
-    '''
-    global playersNb
-    playersNb = 2
-    gameCurrentDim()
+        '''
+        memoryCards = self.load_cards() * 2
+        random.shuffle(memoryCards)
+        return memoryCards
 
-   
-def gameCurrentDim():
-    '''
-    Resets global variables and load a new memory to start a new game with current dimensions
 
-    Returns
-    -------
-    None.
+    # Show visible face of cards 
+    def show(self,item):
+        self.outlet.push_sample(['showingCard;' + str(item) + ';row=' + str((item+1)//self.colNb) + ';column=' + str((item+1)%self.colNb) + ';img=' + str(self.cardsValues[item])])
+        print(f'showingCard;{item};row={(item)//self.rowNb};column={(item)%self.rowNb};img={self.cardsValues[item]}')
+        if item not in self.foundCards:
+            if self.turnedCards == 0:
+                self.but_cards[item].configure(image=self.cardsValues[item])
+                self.turnedCards += 1
+                self.turnedCardsIm.append(self.cardsValues[item])
+                self.turnedCardNb.append(item)
+            elif self.turnedCards == 1:
+                if item!=self.turnedCardNb[len(self.turnedCardNb)-1]:
+                    self.but_cards[item].configure(image=self.cardsValues[item])
+                    self.turnedCards += 1
+                    self.turnedCardsIm.append(self.cardsValues[item])
+                    self.turnedCardNb.append(item)
+        if self.turnedCards == 2:
+            self.root.after(0, self.check)
 
-    '''
-    global cardsValues,rowNb,colNb,cardsNb,pairsNb,frameCards,playersNb
-    if playersNb == 1:
-        stat1player()
-    else:
-        displayScore()
-    cardsNb = colNb*rowNb
-    pairsNb = cardsNb//2
-    cardsValues = initiateGame()
-    resetGlobal()
-    frameCardsButtons()
+    # Verify whether the chosen cards are identical
+    def check(self):
+        if self.turnedCardsIm[-1] == self.turnedCardsIm[-2]:
+            #lsl found pair
+            self.foundCards.append(self.turnedCardNb[-1])
+            self.foundCards.append(self.turnedCardNb[-2])
+            self.but_cards[self.turnedCardNb[-1]].configure(image=self.blankCard)
+            self.but_cards[self.turnedCardNb[-2]].configure(image=self.blankCard)
+            self.incrementScorePlayer()
+        elif self.playersNb == 2:
+            self.switchPlayers()
+        self.after(2000)
+        self.reinit()
 
-def playTheme(x):
-    global theme
-    theme = themeList[x]
-    gameCurrentDim()
-
-def displayScore():
-    global lab_Player1, lab_Player2, lab_scorePlayer1, lab_scorePlayer2, frame
-    frame.destroy()
-    frame = tk.Frame(window)
-    frame.pack(side=tk.TOP)
-    lab_Player1 = tk.Label(frame, text='PLAYER 1 : ', font=("Helvetica",20), fg='red')
-    lab_Player1.pack(side=tk.LEFT)
     
-    lab_scorePlayer1 = tk.Label(frame,text='0', font=("Helvetica", 20))
-    lab_scorePlayer1.pack(side=tk.LEFT)
+    def incrementScorePlayer(self):
+        '''
+        Increments the score of the current player
+
+        Returns
+        -------
+        None.
+
+        '''
+        if self.idCurrentPlayer == 1:
+            self.scorePlayer1 += 1
+            self.lab_scorePlayer1.configure(text=str(self.scorePlayer1))
+        elif self.idCurrentPlayer == 2:
+            self.scorePlayer2 += 1
+            self.lab_scorePlayer2.configure(text=str(self.scorePlayer2))
+
+
+    def switchPlayers(self):
+        '''
+        Switches current player
+
+        Returns
+        -------
+        None.
+
+        '''
+        if self.idCurrentPlayer == 1:
+            self.idCurrentPlayer = 2
+            self.lab_Player1.configure(fg='black')
+            self.lab_Player2.configure(fg='red')
+        else:
+            self.idCurrentPlayer = 1
+            self.lab_Player2.configure(fg='black')
+            self.lab_Player1.configure(fg='red')
+
+    # Add a frame with hidden cards (buttons)
+    def frameCardsButtons(self):
+        filename = 'Images/'+self.theme+'/carte-0.gif'
+        self.hiddenCard=tk.PhotoImage(file=filename)
+        self.frameCards.destroy()
+        self.frameCards = tk.Frame(self.root)
+        self.frameCards.pack(side=tk.BOTTOM)
+        self.but_cards = []
+        for i in range(self.cardsNb):
+            self.but_cards.append(tk.Button(self.frameCards, image=self.hiddenCard,command=lambda x=i:self.show(x)))    
+        for count in range(self.cardsNb):
+            self.but_cards[count].grid(row=count//self.rowNb, column=count%self.rowNb)
+
+    def frameTheme(self):
+        self.frameCards.destroy()
+        self.frame.destroy()
+        self.frame = tk.Frame(self.root, height=500, width=500)
+        self.frame.pack(side=tk.TOP)
+        self.lab_Message = tk.Label(self.frame, text="Choose the theme you want to play with ")
+        self.lab_Message.grid(row=0, column=1)
+        self.but_themes = []
+        for count, themeCard in enumerate(self.themeCards):
+            self.but_themes.append(tk.Button(self.frame, image=themeCard, command=lambda x=count: self.playTheme(x)))
+        for count, but_theme in enumerate(self.but_themes):
+            self.but_theme.grid(row=1, column=1+count)
+            
+
+    def newGame3x4(self):
+        '''
+        Sets grid dimensions to 5x4 and launches a new game
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.rowNb = 4
+        self.colNb = 3
+        self.gameCurrentDim()
+
+    def newGame5x4(self):
+        '''
+        Sets grid dimensions to 5x4 and launches a new game
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.rowNb = 5
+        self.colNb = 4
+        self.gameCurrentDim()
+        
+
+    def newGame5x6(self):
+        '''
+        Sets grid dimensions to 5x6 and lauches a new game
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.rowNb = 6
+        self.colNb = 5
+        self.gameCurrentDim()
+
+    def newGame5x8(self):
+        '''
+        Sets grid dimensions to 5x6 and lauches a new game
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.rowNb = 8
+        self.colNb = 5
+        self.gameCurrentDim()
+
+
+    def onePlayer(self):
+        '''
+        Launches a new game for one player (solo mode)
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.playersNb = 1
+        self.gameCurrentDim()
+        
+
+    def twoPlayers():
+        '''
+        Launches a new game for two players
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.playersNb = 2
+        self.gameCurrentDim()
+
     
-    lab_Player2 = tk.Label(frame, text='  PLAYER 2 : ', font=("Helvetica",20), fg='black')
-    lab_Player2.pack(side=tk.LEFT)
-    
-    lab_scorePlayer2 = tk.Label(frame,text='0', font=("Helvetica", 20))
-    lab_scorePlayer2.pack(side=tk.LEFT)
+    def gameCurrentDim(self):
+        '''
+        Resets global variables and load a new memory to start a new game with current dimensions
 
-def stat1player():
-    global frame, lab_Player1, lab_scorePlayer1
-    frame.destroy()
-    frame = tk.Frame(window)
-    frame.pack(side=tk.TOP)
-    lab_Player1 = tk.Label(frame,text='Pairs of cards = ', font=("Helvetica",20), fg='black')
-    lab_Player1.pack(side=tk.LEFT)
-    lab_scorePlayer1 = tk.Label(frame,text='0', font=("Helvetica", 20))
-    lab_scorePlayer1.pack(side=tk.LEFT)
+        Returns
+        -------
+        None.
 
+        '''
+        if self.playersNb == 1:
+            self.stat1player()
+        else:
+            self.displayScore()
+        self.cardsNb = self.colNb*self.rowNb
+        self.pairsNb = self.cardsNb//2
+        self.cardsValues = self.initiateGame()
+        self.resetGlobal()
+        self.frameCardsButtons()
 
+    def playTheme(self,x):
+        self.theme = self.themeList[x]
+        self.gameCurrentDim()
 
-############################################################################################
+    def displayScore(self):
+        self.frame.destroy()
+        self.frame = tk.Frame(self.root)
+        self.frame.pack(side=tk.TOP)
+        self.lab_Player1 = tk.Label(self.frame, text='PLAYER 1 : ', font=("Helvetica",20), fg='red')
+        self.lab_Player1.pack(side=tk.LEFT)
+        
+        self.lab_scorePlayer1 = tk.Label(self.frame,text='0', font=("Helvetica", 20))
+        self.lab_scorePlayer1.pack(side=tk.LEFT)
+        
+        self.lab_Player2 = tk.Label(self.frame, text='  PLAYER 2 : ', font=("Helvetica",20), fg='black')
+        self.lab_Player2.pack(side=tk.LEFT)
+        
+        self.lab_scorePlayer2 = tk.Label(self.frame,text='0', font=("Helvetica", 20))
+        self.lab_scorePlayer2.pack(side=tk.LEFT)
 
-
-# graphics window
-window = tk.Tk()
-window.title("Memory game")
-frame=tk.Frame(window,height=500,width=500)
-frame.pack(side=tk.TOP)
-frameCards=tk.Frame(window)
-frameCards.pack(side=tk.BOTTOM)
-
-# menus
-top = tk.Menu(window)
-window.config(menu=top)
-jeu = tk.Menu(top, tearoff=False)
-top.add_cascade(label='Game', menu=jeu)
-submenu = tk.Menu(jeu, tearoff=False)
-jeu.add_cascade(label='New Game', menu=submenu)
-submenu.add_command(label='Dim 5x4', command=newGame5x4)
-submenu.add_command(label='Dim 5x6', command=newGame5x6)
-jeu.add_command(label='Close', command=window.destroy)
-
-players_menu = tk.Menu(top,tearoff=False)
-top.add_cascade(label='Players',menu=players_menu)
-players_menu.add_command(label='1 player',command=onePlayer)
-players_menu.add_command(label='2 players',command=twoPlayers)
-
-themeMenu = tk.Menu(top,tearoff=False)
-top.add_command(label='Choose theme',command=frameTheme)
-
-help_menu = tk.Menu(top, tearoff=False)
-top.add_cascade(label='Help',menu=help_menu)
-help_menu.add_command(label='How to play?', command=printRules)
-help_menu.add_command(label='About', command=about)
+    def stat1player(self):
+        self.frame.destroy()
+        self.frame = tk.Frame(self.root)
+        self.frame.pack(side=tk.TOP)
+        self.lab_Player1 = tk.Label(self.frame,text='Pairs of cards = ', font=("Helvetica",20), fg='black')
+        self.lab_Player1.pack(side=tk.LEFT)
+        self.lab_scorePlayer1 = tk.Label(self.frame,text='0', font=("Helvetica", 20))
+        self.lab_scorePlayer1.pack(side=tk.LEFT)
 
 
-# images 
-blankCard = tk.PhotoImage(file='Images/blankCard.gif')
-themeCards = [tk.PhotoImage(file=str('Images/'+theme+'/carte-1.gif')) for theme in themeList]
-    
-# start-up
-frameTheme()
-window.mainloop()
+
+    ############################################################################################
+
+if __name__=='__main__':
+    root = tk.Tk()
+    my_gui = MemoryGui(root)
+    root.mainloop()
+
 
