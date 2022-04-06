@@ -24,13 +24,13 @@ class MemoryGui:
     turnedCardNb = [] # List of index of played cards
     foundCards = [] # List of index of found pairs
     cardsValues = [] # List of index of cards
-    playersNb = 2
+    playersNb = 1
     scorePlayer1 = 0
     scorePlayer2 = 0
     idCurrentPlayer = 1
-    rowNb = 5
-    colNb = 4
-    cardsNb = colNb * rowNb # Total number of cards
+    numCol = 5
+    numRow = 4
+    cardsNb = numRow * numCol # Total number of cards
     pairsNb = cardsNb//2 # Number of different pairs
     themeList = ['Peanuts', 'Cartoon']
     #theme=random.choice(themeList)
@@ -80,7 +80,7 @@ class MemoryGui:
             
         # start-up
         #frameTheme()
-        self.onePlayer()
+        #self.onePlayer()
 
 
 
@@ -126,7 +126,7 @@ class MemoryGui:
         totalNb = 20
         idCard = [i for i in range(1,totalNb+1)]
         chosenCards = random.sample(idCard, k=self.pairsNb)
-        memoryCards = [tk.PhotoImage(file=str('Images/'+self.theme+'/carte-'+str(card)+'.gif')) for card in chosenCards]
+        memoryCards = [str('Images/'+self.theme+'/carte-'+str(card)+'.gif') for card in chosenCards]
         return memoryCards
 
     def initiateGame(self):
@@ -144,20 +144,21 @@ class MemoryGui:
 
     # Show visible face of cards 
     def show(self,item):
-        self.outlet.push_sample(['showingCard;' + str(item) + ';row=' + str((item+1)//self.colNb) + ';column=' + str((item+1)%self.colNb) + ';img=' + str(self.cardsValues[item])])
-        print(f'showingCard;{item};row={(item)//self.rowNb};column={(item)%self.rowNb};img={self.cardsValues[item]}')
+        
         if item not in self.foundCards:
+            self.outlet.push_sample([f'showingCard;{item};row={(item)//self.numCol};column={(item)%self.numCol};img={self.cardImgs[item]}'])
             if self.turnedCards == 0:
                 self.but_cards[item].configure(image=self.cardsValues[item])
                 self.turnedCards += 1
-                self.turnedCardsIm.append(self.cardsValues[item])
+                self.turnedCardsIm.append(self.cardImgs[item])
                 self.turnedCardNb.append(item)
             elif self.turnedCards == 1:
-                if item!=self.turnedCardNb[len(self.turnedCardNb)-1]:
+                if item!=self.turnedCardNb[-1]:
                     self.but_cards[item].configure(image=self.cardsValues[item])
                     self.turnedCards += 1
-                    self.turnedCardsIm.append(self.cardsValues[item])
+                    self.turnedCardsIm.append(self.cardImgs[item])
                     self.turnedCardNb.append(item)
+        self.root.update_idletasks()
         if self.turnedCards == 2:
             self.root.after(0, self.check)
 
@@ -165,6 +166,7 @@ class MemoryGui:
     def check(self):
         if self.turnedCardsIm[-1] == self.turnedCardsIm[-2]:
             #lsl found pair
+            self.outlet.push_sample([f'foundPair;[{self.turnedCardNb[-2:]}];row0={(self.turnedCardNb[-2])//self.numCol};column0={(self.turnedCardNb[-2])%self.numCol};row1={(self.turnedCardNb[-1])//self.numCol};column1={(self.turnedCardNb[-1])%self.numCol};img={self.turnedCardsIm[-1]}'])
             self.foundCards.append(self.turnedCardNb[-1])
             self.foundCards.append(self.turnedCardNb[-2])
             self.but_cards[self.turnedCardNb[-1]].configure(image=self.blankCard)
@@ -172,7 +174,7 @@ class MemoryGui:
             self.incrementScorePlayer()
         elif self.playersNb == 2:
             self.switchPlayers()
-        self.after(2000)
+        self.root.after(2000)
         self.reinit()
 
     
@@ -188,6 +190,8 @@ class MemoryGui:
         if self.idCurrentPlayer == 1:
             self.scorePlayer1 += 1
             self.lab_scorePlayer1.configure(text=str(self.scorePlayer1))
+            if self.scorePlayer1==self.pairsNb:
+                self.outlet.push_sample([f'finishedGame;rows={self.numRow};columns={self.numCol}'])
         elif self.idCurrentPlayer == 2:
             self.scorePlayer2 += 1
             self.lab_scorePlayer2.configure(text=str(self.scorePlayer2))
@@ -222,7 +226,7 @@ class MemoryGui:
         for i in range(self.cardsNb):
             self.but_cards.append(tk.Button(self.frameCards, image=self.hiddenCard,command=lambda x=i:self.show(x)))    
         for count in range(self.cardsNb):
-            self.but_cards[count].grid(row=count//self.rowNb, column=count%self.rowNb)
+            self.but_cards[count].grid(row=count//self.numCol, column=count%self.numCol)
 
     def frameTheme(self):
         self.frameCards.destroy()
@@ -247,8 +251,8 @@ class MemoryGui:
         None.
 
         '''
-        self.rowNb = 4
-        self.colNb = 3
+        self.numCol = 4
+        self.numRow = 3
         self.gameCurrentDim()
 
     def newGame5x4(self):
@@ -260,8 +264,8 @@ class MemoryGui:
         None.
 
         '''
-        self.rowNb = 5
-        self.colNb = 4
+        self.numCol = 5
+        self.numRow = 4
         self.gameCurrentDim()
         
 
@@ -274,8 +278,8 @@ class MemoryGui:
         None.
 
         '''
-        self.rowNb = 6
-        self.colNb = 5
+        self.numCol = 6
+        self.numRow = 5
         self.gameCurrentDim()
 
     def newGame5x8(self):
@@ -287,8 +291,8 @@ class MemoryGui:
         None.
 
         '''
-        self.rowNb = 8
-        self.colNb = 5
+        self.numCol = 8
+        self.numRow = 5
         self.gameCurrentDim()
 
 
@@ -331,11 +335,13 @@ class MemoryGui:
             self.stat1player()
         else:
             self.displayScore()
-        self.cardsNb = self.colNb*self.rowNb
+        self.cardsNb = self.numRow*self.numCol
         self.pairsNb = self.cardsNb//2
-        self.cardsValues = self.initiateGame()
+        self.cardImgs = self.initiateGame()
+        self.cardsValues = [tk.PhotoImage(file=f) for f in self.cardImgs]
         self.resetGlobal()
         self.frameCardsButtons()
+        self.outlet.push_sample([f'startGame;rows={self.numRow};columns={self.numCol}'])
 
     def playTheme(self,x):
         self.theme = self.themeList[x]
